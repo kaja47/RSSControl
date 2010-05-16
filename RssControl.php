@@ -1,5 +1,6 @@
 <?php
 
+
 /**
  * RSS control
  *
@@ -11,21 +12,42 @@
  * @property string $description
  * @property string $link
  * @property array $items
- * @property-read array $properties
+ * @property array $propertyElements
+ * @property array $itemElements
+ * @property-read ArrayObject $properties
  */
 class RssControl extends Control
 {
+
+	/** @var array allowed channel elements */
+	public $propertyElements = array(
+		'title', 'link', 'description', 'language', 'copyright', 'skipDays',
+		'managingEditor', 'webMaster', 'pubDate', 'lastBuildDate', 'category',
+		'generator', 'docs', 'ttl', 'image', 'rating', 'textInput', 'skipHours',
+	);
+
+	/** @var array allowed item elements */
+	public $itemElements = array(
+		'title', 'link', 'description', 'author', 'category', 'comments',
+		'enclosure', 'guid', 'pubDate', 'source',
+	);
+
 	/** @var array */
+	public $onPrepareProperties = array();
+
+	/** @var array */
+	public $onPrepareItem = array();
+
+	/** @var array */
+	public $onCheckItem = array();
+
+	/** @var ArrayObject */
 	private $properties;
 
 	/** @var array */
-	private $items;
+	private $items = array();
 
-	/** @var array */
-	public $onPrepareProperties;
 
-	/** @var array */
-	public $onPrepareItem;
 
 	/**
 	 * Construct
@@ -36,10 +58,14 @@ class RssControl extends Control
 	{
 		parent::__construct($parent, $name);
 
+		$this->properties = new ArrayObject();
+
 		// set default prepare handlers
-		$this->onPrepareProperties[] = array($this, "prepareProperties");
-		$this->onPrepareItem[] = array($this, "prepareItem");
+		$this->onCheckItem[] = callback($this, "checkItem");
+		$this->onCheckItem[] = callback($this, "cleanItem");
 	}
+
+
 
 	/**
 	 * Render control
@@ -49,20 +75,10 @@ class RssControl extends Control
 		// properties
 		$properties = $this->getProperties();
 		$this->onPrepareProperties($properties);
+
 		// check
 		if (empty($properties["title"]) || empty($properties["description"]) || empty($properties["link"])) {
 			throw new InvalidStateException("At least one of mandatory properties title, description or link was not set.");
-		}
-
-		// items
-		$items = $this->getItems();
-		foreach ($items as &$item) {
-			$this->onPrepareItem($item);
-
-			// check
-			if (empty($item["title"]) && empty($item["description"])) {
-				throw new InvalidStateException("One of title or description has to be set.");
-			}
 		}
 
 		// render template
@@ -70,10 +86,12 @@ class RssControl extends Control
 		$template->setFile(dirname(__FILE__) . "/template.phtml");
 
 		$template->channelProperties = $properties;
-		$template->items = $items;
+		$template->items = $this->items;
 
 		$template->render();
 	}
+
+
 
 	/**
 	 * Convert date to RFC822
@@ -82,41 +100,41 @@ class RssControl extends Control
 	 */
 	public static function prepareDate($date)
 	{
-		if (is_string($date) && $date === (string) (int) $date) {
-			$date = (int) $date;
-		}
-
-		if (is_string($date) && !String::endsWith($date, "GMT")) {
-			$date = strtotime($date);
-		}
-
-		if (is_int($date)) {
-			$date = gmdate('D, d M Y H:i:s', $date) . " GMT";
-		}
-
-		return $date;
+		return Tools::createDateTime($date)->format(DateTime::RFC822);
 	}
+
+
+
+	/* ****** callbacks *******************************************************/
+
+
 
 	/**
-	 * Prepare channel properties
-	 * @return array
+	 * Check item
+	 * @return ArrayObject
 	 */
-	public function prepareProperties($properties)
+	public function checkItem(ArrayObject $item)
 	{
-		if (isset($properties["pubDate"])) {
-			$properties["pubDate"] = self::prepareDate($properties["pubDate"]);
+		// check
+		if (empty($item["title"]) && empty($item["description"])) {
+			throw new InvalidArgumentException("One of 'title' or 'description' has to be set.");
 		}
 
-		if (isset($properties["lastBuildDate"])) {
-			$properties["lastBuildDate"] = self::prepareDate($properties["lastBuildDate"]);
+		// checking for allowed tags
+		foreach ($item as $key => $value) {
+			if (!in_array($key, $this->itemElements)) {
+				throw new InvalidArgumentException("Element '$key' is not valid!");
+			}
 		}
 	}
+
+
 
 	/**
 	 * Prepare item
-	 * @return array
+	 * @return ArrayObject
 	 */
-	public function prepareItem($item)
+	public function cleanItem(ArrayObject $item)
 	{
 		// guid & link
 		if (empty($item["guid"]) && isset($item["link"])) {
@@ -133,7 +151,11 @@ class RssControl extends Control
 		}
 	}
 
-	// getters & setters
+
+
+	/* ****** channel getters & setters ***************************************/
+
+	
 
 	/**
 	 * Set channel property
@@ -142,8 +164,18 @@ class RssControl extends Control
 	 */
 	public function setChannelProperty($name, $value)
 	{
+		if (!in_array($name, $this->propertyElements)) {
+			throw new InvalidArgumentException("Element '$name' is not valid!");
+		}
+
+		if ($name === "pubDate" || $name === "lastBuildDate") {
+			$value = self::prepareDate($value);
+		}
+
 		$this->properties[$name] = $value;
 	}
+
+
 
 	/**
 	 * Get channel property
@@ -152,6 +184,10 @@ class RssControl extends Control
 	 */
 	public function getChannelProperty($name)
 	{
+		if (!in_array($name, $this->propertyElements)) {
+			throw new InvalidArgumentException("Element '$name' is not valid!");
+		}
+
 		return $this->properties[$name];
 	}
 
@@ -164,6 +200,8 @@ class RssControl extends Control
 		return $this->properties;
 	}
 
+
+
 	/**
 	 * Set title
 	 * @param string $title
@@ -172,6 +210,8 @@ class RssControl extends Control
 	{
 		$this->setChannelProperty("title", $title);
 	}
+
+
 
 	/**
 	 * Get title
@@ -182,6 +222,8 @@ class RssControl extends Control
 		return $this->getChannelProperty("title");
 	}
 
+
+
 	/**
 	 * Set description
 	 * @param string $description
@@ -190,6 +232,8 @@ class RssControl extends Control
 	{
 		$this->setChannelProperty("description", $description);
 	}
+
+
 
 	/**
 	 * Get description
@@ -200,6 +244,8 @@ class RssControl extends Control
 		return $this->getChannelProperty("description");
 	}
 
+
+
 	/**
 	 * Set link
 	 * @param string $link
@@ -208,6 +254,8 @@ class RssControl extends Control
 	{
 		$this->setChannelProperty("link", $link);
 	}
+
+
 
 	/**
 	 * Get link
@@ -218,14 +266,51 @@ class RssControl extends Control
 		return $this->getChannelProperty("link");
 	}
 
+
+
+	/* ****** items getters & setters *****************************************/
+
+
+
 	/**
-	 * Set items
+	 * Add item
+	 * @param array $item
+	 */
+	public function addItem($item)
+	{
+		$item = new ArrayObject((array) $item);
+
+		// callbacks
+		$this->onPrepareItem($item);
+		$this->onCheckItem($item);
+		
+		$this->items[] = (array) $item;
+	}
+
+
+
+	/**
+	 * Add array of items
 	 * @param array $items
 	 */
-	public function setItems($items)
+	public function addItems(array $items)
 	{
-		$this->items = $items;
+		foreach ($items as $item) {
+			$this->addItem($item);
+		}
 	}
+
+
+
+	/**
+	 * Remove all items
+	 */
+	public function clearItems()
+	{
+		$this->items = array();
+	}
+
+
 
 	/**
 	 * Get items
@@ -235,4 +320,18 @@ class RssControl extends Control
 	{
 		return $this->items;
 	}
+
+
+
+	/**
+	 * Set items
+	 * @param array $items
+	 */
+	public function setItems($items)
+	{
+		$this->clearItems();
+		$this->addItems($items);
+	}
+
+
 }
