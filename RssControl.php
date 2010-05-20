@@ -6,21 +6,39 @@
  *
  * @author Jan Marek
  * @license MIT
- * @copyright (c) Jan Marek 2009
+ * @copyright (c) 2009 Jan Marek
+ * @copyright (c) 2010 Karel Čížek <kaja47@k47.cz>
  *
  * @property string $title
  * @property string $description
  * @property string $link
+ * @property string $language
+ * @property string $copyright
+ * @property string $skipDays
+ * @property string $managingEditor
+ * @property string $webMaster
+ * @property string $pubDate
+ * @property string $lastBuildDate
+ * @property string $category
+ * @property string $generator
+ * @property string $docs
+ * @property string $ttl
+ * @property string $image
+ * @property string $rating
+ * @property string $textInput
+ * @property string $skipHours
+ *
  * @property array $items
- * @property array $propertyElements
- * @property array $itemElements
  * @property-read ArrayObject $properties
  */
+
+
+
 class RssControl extends Control
 {
 
 	/** @var array allowed channel elements */
-	public $propertyElements = array(
+	public $channelElements = array(
 		'title', 'link', 'description', 'language', 'copyright', 'skipDays',
 		'managingEditor', 'webMaster', 'pubDate', 'lastBuildDate', 'category',
 		'generator', 'docs', 'ttl', 'image', 'rating', 'textInput', 'skipHours',
@@ -106,7 +124,7 @@ class RssControl extends Control
 
 
 
-	/* ****** callbacks *******************************************************/
+	/* ****** callbacks *************************************************k*47**/
 
 
 
@@ -154,7 +172,7 @@ class RssControl extends Control
 
 
 
-	/* ****** channel getters & setters ***************************************/
+	/******* channel properties *****************************************k*47**/
 
 	
 
@@ -165,7 +183,7 @@ class RssControl extends Control
 	 */
 	public function setChannelProperty($name, $value)
 	{
-		if (!in_array($name, $this->propertyElements)) {
+		if (!in_array($name, $this->channelElements)) {
 			throw new InvalidArgumentException("Element '$name' is not valid!");
 		}
 
@@ -185,12 +203,14 @@ class RssControl extends Control
 	 */
 	public function getChannelProperty($name)
 	{
-		if (!in_array($name, $this->propertyElements)) {
+		if (!in_array($name, $this->channelElements)) {
 			throw new InvalidArgumentException("Element '$name' is not valid!");
 		}
 
 		return $this->properties[$name];
 	}
+
+
 
 	/**
 	 * Get properties
@@ -204,72 +224,39 @@ class RssControl extends Control
 
 
 	/**
-	 * Set title
-	 * @param string $title
+	 * Get property
+	 * @param string $name
+	 * @param mixed $value
+	 * @return array
 	 */
-	public function setTitle($title)
+	public function __set($name, $value)
 	{
-		$this->setChannelProperty("title", $title);
+		if (in_array($name, $this->channelElements)) {
+			$this->setChannelProperty($name, $value);
+		} else {
+			parent::__set($name, $value);
+		}
 	}
 
 
 
 	/**
-	 * Get title
-	 * @return string
+	 * Set property
+	 * @param string $name
+	 * @return mixed
 	 */
-	public function getTitle()
+	public function &__get($name)
 	{
-		return $this->getChannelProperty("title");
+		if (in_array($name, $this->channelElements)) {
+			return $this->getChannelProperty($name);
+		} else {
+			return parent::__get($name);
+		}
 	}
 
 
 
-	/**
-	 * Set description
-	 * @param string $description
-	 */
-	public function setDescription($description)
-	{
-		$this->setChannelProperty("description", $description);
-	}
-
-
-
-	/**
-	 * Get description
-	 * @return string
-	 */
-	public function getDescription()
-	{
-		return $this->getChannelProperty("description");
-	}
-
-
-
-	/**
-	 * Set link
-	 * @param string $link
-	 */
-	public function setLink($link)
-	{
-		$this->setChannelProperty("link", $link);
-	}
-
-
-
-	/**
-	 * Get link
-	 * @return string
-	 */
-	public function getLink()
-	{
-		return $this->getChannelProperty("link");
-	}
-
-
-
-	/* ****** items getters & setters *****************************************/
+	/* ****** items getters & setters ***********************************k*47**/
 
 
 
