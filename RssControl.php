@@ -100,7 +100,8 @@ class RssControl extends Control
 	 */
 	public static function prepareDate($date)
 	{
-		return Tools::createDateTime($date)->format(DateTime::RFC822);
+		$timestamp = Tools::createDateTime($date)->getTimestamp();
+		return $date = gmdate('D, d M Y H:i:s', $date) . " GMT";
 	}
 
 
