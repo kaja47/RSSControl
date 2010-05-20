@@ -1,19 +1,21 @@
 {contentType 'application/rss+xml', 'utf-8'}
 <<?php ?>?xml version="1.0"?>
 <rss version="2.0">
-	<channel>
-		{block #properties}
-		{foreach $channelProperties as $key => $property}
-		<{$key}>{if is_array($property)}{include #properties 'channelProperties' => $property}{else}{$property}{/if}</{$key}>
-		{/foreach}
-		{/block}
+<channel>
+	{block #properties}
+	{foreach $properties as $key => $property}
+	<{$key}>{if is_array($property)}{include #properties 'properties' => $property}{else}{$property}{/if}</{$key}>
+	{/foreach}
+	{/block}
 
-		{foreach $items as $item}
-		<item>
-			{foreach $item as $key => $property}
-			<{$key}>{$property}</{$key}>
-			{/foreach}
-		</item>
+	{foreach $items as $item}
+	<item>
+		{foreach $item as $key => $property}
+		{foreach (array) $property as $val}
+		<{$key}>{$val}</{$key}>
 		{/foreach}
-	</channel>
+		{/foreach}
+	</item>
+	{/foreach}
+</channel>
 </rss>

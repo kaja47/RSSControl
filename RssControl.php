@@ -103,7 +103,7 @@ class RssControl extends Control
 		$template = $this->getTemplate();
 		$template->setFile(dirname(__FILE__) . "/template.phtml");
 
-		$template->channelProperties = $properties;
+		$template->properties = $properties; // channel properties
 		$template->items = $this->items;
 
 		$template->render();
@@ -119,7 +119,7 @@ class RssControl extends Control
 	public static function prepareDate($date)
 	{
 		$timestamp = Tools::createDateTime($date)->getTimestamp();
-		return $date = gmdate('D, d M Y H:i:s', $date) . " GMT";
+		return gmdate('D, d M Y H:i:s', $timestamp) . " GMT";
 	}
 
 
@@ -174,7 +174,7 @@ class RssControl extends Control
 
 	/******* channel properties *****************************************k*47**/
 
-	
+
 
 	/**
 	 * Set channel property
@@ -201,13 +201,14 @@ class RssControl extends Control
 	 * @param string $name
 	 * @return mixed
 	 */
-	public function getChannelProperty($name)
+	protected function &getChannelProperty($name)
 	{
 		if (!in_array($name, $this->channelElements)) {
 			throw new InvalidArgumentException("Element '$name' is not valid!");
 		}
 
-		return $this->properties[$name];
+		$p = $this->properties[$name];
+		return $p;
 	}
 
 
@@ -271,7 +272,7 @@ class RssControl extends Control
 		// callbacks
 		$this->onPrepareItem($item);
 		$this->onCheckItem($item);
-		
+
 		$this->items[] = (array) $item;
 	}
 
